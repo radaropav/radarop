@@ -19,17 +19,6 @@ PORCENTAJE_SL = 0.0015  # Stop Loss ultra corto: 0.15% del precio
 PORCENTAJE_TP = 0.0022  # Take Profit realista: 0.22% (Ratio ~ 1:1.5)
 
 # =====================================================================
-# PASARELA WSGI ESTÁNDAR EXIGIDA POR RENDER (Cerrar el bucle de espera)
-# =====================================================================
-def app(environ, start_response):
-    """Interfaz web nativa de alta prioridad para amarrar el puerto de Render."""
-    status = '200 OK'
-    response_headers = [('Content-type', 'text/html; charset=utf-8')]
-    start_response(status, response_headers)
-    mensaje = "📡 Radar Watson Pro: Sistema Activo de Forma Perpetua en la Nube."
-    return [mensaje.encode('utf-8')]
-
-# =====================================================================
 # FUNCIONES DE CONEXIÓN CON TELEGRAM Y ORÁCULO DE DATOS
 # =====================================================================
 
@@ -44,9 +33,7 @@ def obtener_datos_mercado():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
     precio, open_interest, volumen = None, None, None
-
     try:
-        # Consulta directa al oráculo libre de CryptoCompare para evitar bloqueos corporativos
         url_alt = "https://cryptocompare.com"
         res_alt = requests.get(url_alt, headers=cabeceras, timeout=8).json()
         datos_eth = res_alt['RAW']['ETH']['USDT']
@@ -56,26 +43,20 @@ def obtener_datos_mercado():
         open_interest = volumen * 0.35
     except Exception:
         return None, None, None
-
     return precio, open_interest, volumen
 
 # =====================================================================
-# BUCLE PRINCIPAL DEL RADAR (Corriendo de fondo sin interrupción)
+# NÚCLEO OPERATIVO DEL RADAR (Ejecución Directa)
 # =====================================================================
-def bucle_radar():
+def ejecutar_bucle_radar():
     print(f"📡 RADAR WATSON ULTRA-SENSITIVO: ACTIVADO PARA {SYMBOL}")
-    enviar_telegram(f"📡 *Radar Con Módulo de Gestión de Riesgo Activo*\nMonitoreando órdenes sanas de {SYMBOL}...")
+    enviar_telegram(f"📡 *Radar 24/7 Nube Activo de Forma Perpetua*\nMonitoreando órdenes sanas de {SYMBOL}...")
 
-    while True:
-        precio_anterior, oi_anterior, vol_anterior = obtener_datos_mercado()
-        if precio_anterior and precio_anterior > 0:
-            print(f"📊 CONEXIÓN INICIAL EXITOSA | ETH: ${precio_anterior:.2f} | OI Real: {oi_anterior:,.2f} | Vol 24h: {vol_anterior:,.2f} ETH\n")
-            break
-            
-        # Respaldo de emergencia inmediato si el oráculo primario experimenta retraso en el primer milisegundo
+    # Forzar la estabilización inicial del mercado real de Ethereum
+    precio_anterior, oi_anterior, vol_anterior = obtener_datos_mercado()
+    if not precio_anterior or precio_anterior <= 0:
         precio_anterior, oi_anterior, vol_anterior = 1925.00, 500000.0, 15000000.0
-        print(f"📊 CONEXIÓN INICIAL ESTABILIZADA | ETH: ${precio_anterior:.2f}\n")
-        break
+    print(f"📊 CONEXIÓN INICIAL ESTABILIZADA EN SERVIDOR | ETH: ${precio_anterior:.2f}\n")
 
     while True:
         try:
@@ -118,6 +99,7 @@ def bucle_radar():
             print(f"[RADAR-1M] ETH: ${precio_actual:.2f} | Var. Precio: {delta_precio:+.3f}% | Var. OI: {delta_oi:+.3f}%")
             print(f"👉 Dictamen: {entorno} | 🎯 ACCIÓN: {accion_trader}\n")
             
+            # Alerta flash minuto a minuto directa a tu Telegram
             alerta_minuto = f"🎯 *ETH:* ${precio_actual:.2f} | {accion_trader}{detalles_orden}"
             enviar_telegram(alerta_minuto)
             
@@ -146,9 +128,17 @@ def bucle_radar():
             time.sleep(5)
 
 # =====================================================================
-# DISPARADOR DE ACTIVACIÓN ASÍNCRONA
+# INICIALIZACIÓN ACOPLADA DE ALTA PRIORIDAD (Inmune a bloqueos)
 # =====================================================================
-# Iniciamos el radar en un hilo independiente antes de entregarle el control a Render
-hilo_radar = threading.Thread(target=bucle_radar)
-hilo_radar.daemon = True
-hilo_radar.start()
+# Lanzamos el bucle del radar de forma inmediata en una subtarea asíncrona dedicada
+hilo_seguro = threading.Thread(target=ejecutar_bucle_radar)
+hilo_seguro.daemon = True
+hilo_seguro.start()
+
+def app(environ, start_response):
+    """Interfaz web nativa exigida por Render."""
+    status = '200 OK'
+    response_headers = [('Content-type', 'text/html; charset=utf-8')]
+    start_response(status, response_headers)
+    mensaje = "📡 Radar Watson Pro: Sistema Operando 24/7 en Segundo Plano."
+    return [mensaje.encode('utf-8')]
