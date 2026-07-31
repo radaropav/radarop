@@ -46,16 +46,16 @@ def obtener_datos_mercado():
     return precio, open_interest, volumen
 
 # =====================================================================
-# NÚCLEO OPERATIVO DEL RADAR (Ejecución Directa)
+# NÚCLEO OPERATIVO DEL RADAR
 # =====================================================================
 def ejecutar_bucle_radar():
     print(f"📡 RADAR WATSON ULTRA-SENSITIVO: ACTIVADO PARA {SYMBOL}")
-    enviar_telegram(f"📡 *Radar 24/7 Nube Activo de Forma Perpetua*\nMonitoreando órdenes sanas de {SYMBOL}...")
+    enviar_telegram(f"📡 *Radar Watson Pro En Linea 24/7*\nMonitoreando Ethereum de forma perpetua desde la nube...")
 
-    # Forzar la estabilización inicial del mercado real de Ethereum
+    # Estabilización inicial de mercado real
     precio_anterior, oi_anterior, vol_anterior = obtener_datos_mercado()
     if not precio_anterior or precio_anterior <= 0:
-        precio_anterior, oi_anterior, vol_anterior = 1925.00, 500000.0, 15000000.0
+        precio_anterior, oi_anterior, vol_anterior = 3400.00, 500000.0, 15000000.0
     print(f"📊 CONEXIÓN INICIAL ESTABILIZADA EN SERVIDOR | ETH: ${precio_anterior:.2f}\n")
 
     while True:
@@ -128,17 +128,18 @@ def ejecutar_bucle_radar():
             time.sleep(5)
 
 # =====================================================================
-# INICIALIZACIÓN ACOPLADA DE ALTA PRIORIDAD (Inmune a bloqueos)
+# CONFIGURACIÓN DE ENGANCHE NATURALEZA GUNICORN (HOOK DE ARRANQUE)
 # =====================================================================
-# Lanzamos el bucle del radar de forma inmediata en una subtarea asíncrona dedicada
-hilo_seguro = threading.Thread(target=ejecutar_bucle_radar)
-hilo_seguro.daemon = True
-hilo_seguro.start()
+def on_starting(server):
+    """Gancho oficial de Gunicorn que se ejecuta tras estabilizar el servidor en la nube."""
+    hilo_indestructible = threading.Thread(target=ejecutar_bucle_radar)
+    hilo_indestructible.daemon = True
+    hilo_indestructible.start()
 
 def app(environ, start_response):
     """Interfaz web nativa exigida por Render."""
     status = '200 OK'
     response_headers = [('Content-type', 'text/html; charset=utf-8')]
     start_response(status, response_headers)
-    mensaje = "📡 Radar Watson Pro: Sistema Operando 24/7 en Segundo Plano."
+    mensaje = "📡 Radar Watson Pro: Sistema Operando 24/7 en la Nube de Forma Estable."
     return [mensaje.encode('utf-8')]
