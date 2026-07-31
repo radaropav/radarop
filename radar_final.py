@@ -25,17 +25,19 @@ PORCENTAJE_TP = 0.0022  # Take Profit realista: 0.22% (Ratio ~ 1:1.5)
 class ManejadorWeb(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        self.send_header("Content-type", "text/html; charset=utf-8")
         self.end_headers()
-        self.wfile.write(b"📡 Radar Watson Pro: Sistema Activo de Forma Perpetua.")
+        # SOLUCIÓN DEFINITIVA: .encode('utf-8') para procesar emojis de forma segura
+        mensaje = "📡 Radar Watson Pro: Sistema Activo de Forma Perpetua."
+        self.wfile.write(mensaje.encode('utf-8'))
         
     def do_HEAD(self):
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        self.send_header("Content-type", "text/html; charset=utf-8")
         self.end_headers()
 
     def log_message(self, format, *args):
-        return  # Desactivamos logs basura en la pantalla de Render
+        return  # Desactivamos logs en la pantalla de Render
 
 def arrancar_servidor_web():
     """Amarra el puerto de forma inmediata para que Render de el pase Live."""
@@ -97,15 +99,12 @@ def bucle_radar():
             delta_precio = ((precio_actual - precio_anterior) / precio_anterior) * 100
             delta_oi = ((oi_actual - oi_anterior) / oi_anterior) * 100 if oi_anterior > 0 else 0.0
             
-            # Variables estructurales de gestión de órdenes
             detalles_orden = ""
             
             # MÓDULO MATEMÁTICO DE RECOMENDACIÓN OPERATIVA Y GESTIÓN DE RIESGO SANO
             if delta_precio > 0.15 and delta_oi > 0.4:
                 entorno = "🚀 INTENCIÓN ALCISTA INSTITUCIONAL (Inyección de Longs)"
                 accion_trader = "🟩 OPERAR AL LONG"
-                
-                # Cálculos exactos para una compra segura
                 sl = precio_actual * (1 - PORCENTAJE_SL)
                 tp = precio_actual * (1 + PORCENTAJE_TP)
                 detalles_orden = f"\n📊 *Estructura Comercial Sana:*\n• Entrada: `${precio_actual:.2f}`\n• Stop Loss (SL): `${sl:.2f}`\n• Take Profit (TP): `${tp:.2f}`"
@@ -113,8 +112,6 @@ def bucle_radar():
             elif delta_precio < -0.15 and delta_oi > 0.4:
                 entorno = "🩸 INTENCIÓN BAJISTA INSTITUCIONAL (Inyección de Shorts)"
                 accion_trader = "🔴 OPERAR AL SHORT"
-                
-                # Cálculos exactos para una venta corta segura
                 sl = precio_actual * (1 + PORCENTAJE_SL)
                 tp = precio_actual * (1 - PORCENTAJE_TP)
                 detalles_orden = f"\n📊 *Estructura Comercial Sana:*\n• Entrada: `${precio_actual:.2f}`\n• Stop Loss (SL): `${sl:.2f}`\n• Take Profit (TP): `${tp:.2f}`"
@@ -129,11 +126,9 @@ def bucle_radar():
                 entorno = "⏳ ENTORNO NEUTRO / CONSTRICCIÓN DE RANGO"
                 accion_trader = "⬜ MANTENERSE QUIETO"
             
-            # Impresión de bitácora en Render
             print(f"[RADAR-1M] ETH: ${precio_actual:.2f} | Var. Precio: {delta_precio:+.3f}% | Var. OI: {delta_oi:+.3f}%")
             print(f"👉 Dictamen: {entorno} | 🎯 ACCIÓN: {accion_trader}\n")
             
-            # Alerta flash minuto a minuto directa a tu Telegram (Incluye SL y TP si el mercado es operable)
             alerta_minuto = f"🎯 *ETH:* ${precio_actual:.2f} | {accion_trader}{detalles_orden}"
             enviar_telegram(alerta_minuto)
             
@@ -165,10 +160,8 @@ def bucle_radar():
 # INICIALIZACIÓN DE PROCESOS PARALELOS
 # =====================================================================
 if __name__ == "__main__":
-    # 1. Lanzamos el radar en un hilo independiente para que no interrumpa el puerto
     hilo_radar = threading.Thread(target=bucle_radar)
     hilo_radar.daemon = True
     hilo_radar.start()
     
-    # 2. Corremos el servidor web nativo en el hilo principal para responder a Render
     arrancar_servidor_web()
