@@ -4,7 +4,7 @@ import json
 import sys
 
 # Forzamos la instalación rápida de la librería de Yahoo Finance autorizada por Google
-!pip install yfinance --quiet
+
 import yfinance as yf
 
 # =====================================================================
