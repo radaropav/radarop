@@ -12,7 +12,7 @@ SYMBOL = "ETHUSDT"
 INTERVALO_SEGUNDOS = 60  
 
 # Extracción segura desde variables de entorno de Render
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "TU_TOKEN_AQUI_SI_NO_USAS_ENV")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5883043795")
 
 # RATIOS DE GESTIÓN DE RIESGO SANO (SCALPING DE ALTA PROBABILIDAD)
@@ -20,40 +20,44 @@ PORCENTAJE_SL = 0.0015  # Stop Loss ultra corto: 0.15% del precio
 PORCENTAJE_TP = 0.0022  # Take Profit realista: 0.22% (Ratio ~ 1:1.5)
 
 # =====================================================================
-# FUNCIONES DE CONEXIÓN CON TELEGRAM Y ORÁCULO DE DATOS
+# FUNCIONES DE CONEXIÓN CON TELEGRAM Y ORÁCULO OFICIAL DE BINANCE
 # =====================================================================
 
 def enviar_telegram(mensaje):
     """Envía notificaciones utilizando la API oficial de Bots de Telegram."""
-    # CORRECCIÓN DE URL: Se añade la barra '/' obligatoria después de 'bot'
-    url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
+    # Limpiamos el token por si acaso quedaron espacios o URLs basura pegadas
+    token_limpio = TELEGRAM_TOKEN.replace("https://telegram.org", "").strip()
+    url = f"https://telegram.org{token_limpio}/sendMessage"
+    
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try: 
         res = requests.post(url, json=payload, timeout=5)
-        # Imprime el error en la consola de Render si Telegram rechaza el mensaje
         if res.status_code != 200:
-            print(f"❌ Error en API Telegram: {res.text}")
+            print(f"❌ Error en API Telegram: {res.text} | URL intentada: https://telegram.org[OCULTO]/sendMessage")
         else:
-            print(f"✅ Mensaje enviado a Telegram: {mensaje[:30]}...")
+            print(f"✅ Mensaje enviado a Telegram correctamente.")
     except Exception as e: 
         print(f"❌ Fallo de red en enviar_telegram: {e}")
 
 def obtener_datos_mercado():
-    cabeceras = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
+    """Consulta directa y estable a la API oficial de Futuros de Binance."""
     precio, open_interest, volumen = None, None, None
     try:
-        # Usamos la API pública de CryptoCompare para obtener precios reales estructurados
-        url_alt = "https://cryptocompare.com"
-        res_alt = requests.get(url_alt, headers=cabeceras, timeout=8).json()
-        datos_eth = res_alt['RAW']['ETH']['USDT']
-        precio = float(datos_eth['PRICE'])
-        volumen_usd = float(datos_eth['VOLUME24HOURTO'])
-        volumen = volumen_usd / precio if precio else 0.0
-        open_interest = volumen * 0.35
+        # 1. Obtener precio actual de futuros en Binance
+        url_precio = f"https://binance.com{SYMBOL}"
+        res_precio = requests.get(url_precio, timeout=5).json()
+        precio = float(res_precio['price'])
+        
+        # 2. Obtener estadísticas de las últimas 24 horas (Volumen)
+        url_ticker = f"https://binance.com{SYMBOL}"
+        res_ticker = requests.get(url_ticker, timeout=5).json()
+        volumen = float(res_ticker['volume'])
+        
+        # Simulación estadística sana de Open Interest basada en volumen real de futuros
+        open_interest = volumen * 0.25
+        
     except Exception as e:
-        print(f"⚠️ Error al consultar datos de mercado: {e}")
+        print(f"⚠️ Error al consultar la API de Binance: {e}")
         return None, None, None
     return precio, open_interest, volumen
 
@@ -62,13 +66,13 @@ def obtener_datos_mercado():
 # =====================================================================
 def ejecutar_bucle_radar():
     print(f"📡 RADAR WATSON ULTRA-SENSITIVO: ACTIVADO PARA {SYMBOL}")
-    enviar_telegram(f"📡 *Radar 24/7 Nube Activo de Forma Perpetua*\nMonitoreando órdenes sanas de {SYMBOL}...")
+    enviar_telegram(f"📡 *Radar 24/7 Nube Activo de Forma Perpetua*\nMonitoreando futuros oficiales de Binance para {SYMBOL}...")
 
-    # Forzar la estabilización inicial del mercado real de Ethereum
+    # Forzar la estabilización inicial con datos reales de Binance
     precio_anterior, oi_anterior, vol_anterior = obtener_datos_mercado()
     if not precio_anterior or precio_anterior <= 0:
         precio_anterior, oi_anterior, vol_anterior = 3400.00, 500000.0, 15000000.0
-    print(f"📊 CONEXIÓN INICIAL ESTABILIZADA EN SERVIDOR | ETH: ${precio_anterior:.2f}\n")
+    print(f"📊 CONEXIÓN INICIAL ESTABILIZADA EN BINANCE | ETH: ${precio_anterior:.2f}\n")
 
     while True:
         try:
@@ -132,9 +136,9 @@ def ejecutar_bucle_radar():
                 )
                 enviar_telegram(alerta_msg)
                 
-            precio_anterior = precio_actual
-            oi_anterior = oi_actual
-            vol_anterior = vol_actual
+                precio_anterior = precio_actual
+                oi_anterior = oi_actual
+                vol_anterior = vol_actual
             
         except Exception as e:
             print(f"❌ Error crítico en el bucle: {e}")
