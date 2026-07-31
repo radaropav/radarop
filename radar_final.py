@@ -83,7 +83,6 @@ def obtener_datos_mercado():
             open_interest = volumen * 0.35
             
     except Exception:
-        # Respaldo rápido mediante la API alternativa CryptoCompare por si CoinGecko satura un segundo
         try:
             url_alt = "https://cryptocompare.com"
             res_alt = requests.get(url_alt, headers=cabeceras, timeout=5).json()
@@ -98,7 +97,7 @@ def obtener_datos_mercado():
     return precio, open_interest, volumen
 
 # =====================================================================
-# BUCLE PRINCIPAL DEL RADAR EN SEGUNDO PLANO
+# BUCLE PRINCIPAL DEL RADAR EN EL HILO DE ENTRADA PRINCIPAL
 # =====================================================================
 def bucle_radar():
     print(f"📡 RADAR WATSON ULTRA-SENSITIVO: ACTIVADO PARA {SYMBOL}")
@@ -181,11 +180,13 @@ def bucle_radar():
             time.sleep(5)
 
 # =====================================================================
-# INICIALIZACIÓN DE PROCESOS PARALELOS
+# INICIALIZACIÓN INVERTIDA (Servidor en segundo plano, Radar al frente)
 # =====================================================================
 if __name__ == "__main__":
-    hilo_radar = threading.Thread(target=bucle_radar)
-    hilo_radar.daemon = True
-    hilo_radar.start()
+    # 1. El servidor web pasa a correr en un hilo secundario (no bloquea el flujo principal)
+    hilo_web = threading.Thread(target=arrancar_servidor_web)
+    hilo_web.daemon = True
+    hilo_web.start()
     
-    arrancar_servidor_web()
+    # 2. El bucle del radar toma el canal principal de forma inmediata
+    bucle_radar()
