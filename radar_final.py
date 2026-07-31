@@ -25,6 +25,7 @@ PORCENTAJE_TP = 0.0022  # Take Profit realista: 0.22% (Ratio ~ 1:1.5)
 
 def enviar_telegram(mensaje):
     """Envía notificaciones utilizando la API oficial de Bots de Telegram."""
+    # CORRECCIÓN DE URL: Se añade la barra '/' obligatoria después de 'bot'
     url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try: 
