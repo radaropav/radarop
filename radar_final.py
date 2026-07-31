@@ -3,16 +3,17 @@ import requests
 import json
 import sys
 import threading
-
-# Importamos la librería de datos oficial
-import yfinance as yf
+import os
 
 # =====================================================================
 # CONFIGURACIÓN ULTRA-SENSITIVA PARA SERVIDORES 24/7 (1 MINUTO)
 # =====================================================================
 SYMBOL = "ETHUSDT"  
 INTERVALO_SEGUNDOS = 60  
-TELEGRAM_CHAT_ID = "5883043795"
+
+# Extracción segura desde variables de entorno de Render
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "TU_TOKEN_AQUI_SI_NO_USAS_ENV")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "5883043795")
 
 # RATIOS DE GESTIÓN DE RIESGO SANO (SCALPING DE ALTA PROBABILIDAD)
 PORCENTAJE_SL = 0.0015  # Stop Loss ultra corto: 0.15% del precio
@@ -23,17 +24,26 @@ PORCENTAJE_TP = 0.0022  # Take Profit realista: 0.22% (Ratio ~ 1:1.5)
 # =====================================================================
 
 def enviar_telegram(mensaje):
-    url = "https://telegram.org"
+    """Envía notificaciones utilizando la API oficial de Bots de Telegram."""
+    url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
-    try: requests.post(url, json=payload, timeout=5)
-    except Exception: pass
+    try: 
+        res = requests.post(url, json=payload, timeout=5)
+        # Imprime el error en la consola de Render si Telegram rechaza el mensaje
+        if res.status_code != 200:
+            print(f"❌ Error en API Telegram: {res.text}")
+        else:
+            print(f"✅ Mensaje enviado a Telegram: {mensaje[:30]}...")
+    except Exception as e: 
+        print(f"❌ Fallo de red en enviar_telegram: {e}")
 
 def obtener_datos_mercado():
     cabeceras = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
     precio, open_interest, volumen = None, None, None
     try:
+        # Usamos la API pública de CryptoCompare para obtener precios reales estructurados
         url_alt = "https://cryptocompare.com"
         res_alt = requests.get(url_alt, headers=cabeceras, timeout=8).json()
         datos_eth = res_alt['RAW']['ETH']['USDT']
@@ -41,18 +51,19 @@ def obtener_datos_mercado():
         volumen_usd = float(datos_eth['VOLUME24HOURTO'])
         volumen = volumen_usd / precio if precio else 0.0
         open_interest = volumen * 0.35
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ Error al consultar datos de mercado: {e}")
         return None, None, None
     return precio, open_interest, volumen
 
 # =====================================================================
-# NÚCLEO OPERATIVO DEL RADAR
+# NÚCLEO OPERATIVO DEL RADAR (Ejecución Directa)
 # =====================================================================
 def ejecutar_bucle_radar():
     print(f"📡 RADAR WATSON ULTRA-SENSITIVO: ACTIVADO PARA {SYMBOL}")
-    enviar_telegram(f"📡 *Radar Watson Pro En Linea 24/7*\nMonitoreando Ethereum de forma perpetua desde la nube...")
+    enviar_telegram(f"📡 *Radar 24/7 Nube Activo de Forma Perpetua*\nMonitoreando órdenes sanas de {SYMBOL}...")
 
-    # Estabilización inicial de mercado real
+    # Forzar la estabilización inicial del mercado real de Ethereum
     precio_anterior, oi_anterior, vol_anterior = obtener_datos_mercado()
     if not precio_anterior or precio_anterior <= 0:
         precio_anterior, oi_anterior, vol_anterior = 3400.00, 500000.0, 15000000.0
@@ -71,7 +82,7 @@ def ejecutar_bucle_radar():
             
             detalles_orden = ""
             
-            # MÓDULO MATEMÁTICO DE RECOMENDACIÓN OPERATIVA Y GESTIÓN DE RIESGO SANO
+            # MÓDULO MATEMÁTICO DE RECOMENDACIÓN OPERATIVA
             if delta_precio > 0.15 and delta_oi > 0.4:
                 entorno = "🚀 INTENCIÓN ALCISTA INSTITUCIONAL (Inyección de Longs)"
                 accion_trader = "🟩 OPERAR AL LONG"
@@ -124,22 +135,37 @@ def ejecutar_bucle_radar():
             oi_anterior = oi_actual
             vol_anterior = vol_actual
             
-        except Exception:
+        except Exception as e:
+            print(f"❌ Error crítico en el bucle: {e}")
             time.sleep(5)
 
 # =====================================================================
-# CONFIGURACIÓN DE ENGANCHE NATURALEZA GUNICORN (HOOK DE ARRANQUE)
+# INICIALIZACIÓN DE PRODUCCIÓN INMUNE A SUSPENSIONES (Render / Gunicorn)
 # =====================================================================
-def on_starting(server):
-    """Gancho oficial de Gunicorn que se ejecuta tras estabilizar el servidor en la nube."""
-    hilo_indestructible = threading.Thread(target=ejecutar_bucle_radar)
-    hilo_indestructible.daemon = True
-    hilo_indestructible.start()
+radar_iniciado = False
 
 def app(environ, start_response):
-    """Interfaz web nativa exigida por Render."""
+    """Interfaz web nativa exigida por Render que despierta y asegura el Radar."""
+    global radar_iniciado
+    
+    if not radar_iniciado:
+        print("⚡ [PRODUCCIÓN] Gunicorn detectó actividad web. Asegurando persistencia...")
+        hilo_seguro = threading.Thread(target=ejecutar_bucle_radar)
+        hilo_seguro.daemon = True
+        hilo_seguro.start()
+        radar_iniciado = True
+
     status = '200 OK'
     response_headers = [('Content-type', 'text/html; charset=utf-8')]
     start_response(status, response_headers)
-    mensaje = "📡 Radar Watson Pro: Sistema Operando 24/7 en la Nube de Forma Estable."
+    mensaje = "📡 Radar Watson Pro: Sistema Operando Persistente 24/7 en Segundo Plano."
     return [mensaje.encode('utf-8')]
+
+if __name__ == "__main__":
+    ejecutar_bucle_radar()
+else:
+    if not radar_iniciado:
+        hilo_seguro = threading.Thread(target=ejecutar_bucle_radar)
+        hilo_seguro.daemon = True
+        hilo_seguro.start()
+        radar_iniciado = True
