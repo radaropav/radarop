@@ -119,7 +119,8 @@ def app(environ, start_response):
         hilo_seguro.start()
         radar_iniciado = True
     start_response('200 OK', [('Content-type', 'text/html; charset=utf-8')])
-    return [b"📡 Radar Watson Pro: Sistema Operando Persistente 24/7."]
+    mensaje = "📡 Radar Watson Pro: Sistema Operando Persistente 24/7."
+    return [mensaje.encode('utf-8')]
 
 if not radar_iniciado:
     hilo_seguro = threading.Thread(target=ejecutar_bucle_radar)
