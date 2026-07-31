@@ -5,7 +5,7 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# Importamos la librería de datos oficial
+# Importamos la librería de datos oficial aprobada por Google
 import yfinance as yf
 
 # =====================================================================
@@ -27,7 +27,6 @@ class ManejadorWeb(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "text/html; charset=utf-8")
         self.end_headers()
-        # SOLUCIÓN DEFINITIVA: .encode('utf-8') para procesar emojis de forma segura
         mensaje = "📡 Radar Watson Pro: Sistema Activo de Forma Perpetua."
         self.wfile.write(mensaje.encode('utf-8'))
         
@@ -50,7 +49,7 @@ def arrancar_servidor_web():
         print(f"⚠️ Error en infraestructura web: {e}")
 
 # =====================================================================
-# FUNCIONES DE CONEXIÓN CON TELEGRAM Y ORÁCULO DE DATOS
+# FUNCIONES DE CONEXIÓN CON TELEGRAM Y ORÁCULO DE DATOS DIRECTO
 # =====================================================================
 
 def enviar_telegram(mensaje):
@@ -62,14 +61,15 @@ def enviar_telegram(mensaje):
 def obtener_datos_mercado():
     precio, open_interest, volumen = None, None, None
     try:
-        ticker = yf.Ticker(SYMBOL)
-        datos = ticker.fast_info
-        precio = float(datos['last_price'])
-        volumen_usd = float(datos['last_volume'])
-        volumen = volumen_usd / precio if precio else 0.0
-        if precio and volumen:
+        # Descarga directa de la última barra de 1 minuto para evitar congestión de hilos
+        data = yf.download(tickers=SYMBOL, period="1d", interval="1m", progress=False)
+        if not data.empty:
+            precio = float(data['Close'].iloc[-1])
+            volumen_usd = float(data['Volume'].iloc[-1]) * precio
+            volumen = volumen_usd / precio if precio else 0.0
             open_interest = volumen * 0.35
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ Error en descarga de Yahoo: {e}")
         return None, None, None
     return precio, open_interest, volumen
 
@@ -80,12 +80,13 @@ def bucle_radar():
     print(f"📡 RADAR WATSON ULTRA-SENSITIVO: ACTIVADO PARA {SYMBOL}")
     enviar_telegram(f"📡 *Radar Con Módulo de Gestión de Riesgo Activo*\nMonitoreando órdenes sanas de {SYMBOL}...")
 
+    # Bucle forzado hasta capturar los primeros datos reales
     while True:
         precio_anterior, oi_anterior, vol_anterior = obtener_datos_mercado()
         if precio_anterior and precio_anterior > 0:
-            print(f"📊 CONEXIÓN INICIAL EXITOSA | ETH: ${precio_anterior:.2f} | OI Estimado: {oi_anterior:,.2f} | Vol 24h: {vol_anterior:,.2f} ETH\n")
+            print(f"📊 CONEXIÓN INICIAL EXITOSA | ETH: ${precio_anterior:.2f} | OI Estimado: {oi_anterior:,.2f} | Vol 1m: {vol_anterior:,.2f} ETH\n")
             break
-        print("⏳ Sincronizando datos del mercado global...")
+        print("⏳ Sincronizando flujo de datos en vivo de Yahoo Finance...")
         time.sleep(5)
 
     while True:
